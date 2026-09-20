@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QVAC Revision Forge</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f1ea;
+      color: #202020;
+    }
+
+    .container {
+      width: min(1100px, 92%);
+      margin: 0 auto;
+      padding: 50px 0;
+    }
+
+    header {
+      margin-bottom: 35px;
+    }
+
+    .eyebrow {
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #765c32;
+    }
+
+    h1 {
+      margin: 8px 0;
+      font-size: clamp(36px, 6vw, 64px);
+      line-height: 1;
+    }
+
+    .intro {
+      max-width: 650px;
+      color: #625f58;
+      font-size: 18px;
+      line-height: 1.6;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+    }
+
+    .panel {
+      background: white;
+      border: 1px solid #ddd7cb;
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.04);
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 430px;
+      resize: vertical;
+      border: 1px solid #d4cec2;
+      border-radius: 12px;
+      padding: 16px;
+      font: inherit;
+      line-height: 1.6;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: #765c32;
+    }
+
+    button {
+      margin-top: 15px;
+      width: 100%;
+      border: 0;
+      border-radius: 12px;
+      padding: 15px;
+      background: #202020;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #3a3a3a;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: wait;
+    }
+
+    .status {
+      margin-top: 12px;
+      min-height: 22px;
+      color: #765c32;
+      font-size: 14px;
+    }
+
+    .result {
+      min-height: 430px;
+      white-space: pre-wrap;
+      line-height: 1.65;
+      color: #363636;
+    }
+
+    .placeholder {
+      color: #99938a;
+    }
+
+    .footer {
+      margin-top: 30px;
+      color: #777168;
+      font-size: 13px;
+    }
+
+    @media (max-width: 800px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      textarea,
+      .result {
+        min-height: 300px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+
+    <header>
+      <div class="eyebrow">Local AI Study Tool</div>
+      <h1>Revision Forge</h1>
+      <p class="intro">
+        Turn raw study notes into a focused revision pack using
+        QVAC-powered on-device AI.
+      </p>
+    </header>
+
+    <section class="workspace">
+
+      <div class="panel">
+        <label for="notes">Your study notes</label>
+
+        <textarea
+          id="notes"
+          placeholder="Paste your notes here...
+
+Example:
+Photosynthesis converts light energy into chemical energy.
+Chlorophyll absorbs light.
+Carbon dioxide enters through stomata.
+Water is absorbed by the roots.
+The light-dependent reactions produce ATP and NADPH.
+The Calvin cycle uses ATP and NADPH to help build sugars.
+Oxygen is released when water is split."
+        ></textarea>
+
+        <button id="generate">Forge Revision Pack</button>
+
+        <div class="status" id="status"></div>
+      </div>
+
+      <div class="panel">
+        <label>Revision pack</label>
+
+        <div class="result placeholder" id="result">
+          Your generated revision pack will appear here.
+        </div>
+      </div>
+
+    </section>
+
+    <div class="footer">
+      Powered by QVAC local inference. No cloud AI API is used.
+    </div>
+
+  </main>
+
+  <script>
+    const notes = document.getElementById("notes");
+    const generate = document.getElementById("generate");
+    const result = document.getElementById("result");
+    const status = document.getElementById("status");
+
+    generate.addEventListener("click", async () => {
+      const text = notes.value.trim();
+
+      if (!text) {
+        status.textContent = "Add some study notes first.";
+        return;
+      }
+
+      generate.disabled = true;
+      status.textContent = "Loading local model and forging your revision pack...";
+      result.classList.remove("placeholder");
+      result.textContent = "";
+
+      try {
+        const response = await fetch("/generate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            notes: text
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Generation failed.");
+        }
+
+        result.textContent = data.result;
+        status.textContent = "Revision pack generated locally by QVAC.";
+      } catch (error) {
+        result.textContent = "";
+        result.classList.add("placeholder");
+        status.textContent = error.message;
+      } finally {
+        generate.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
