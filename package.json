@@ -4,10 +4,9 @@
   "description": "A local AI study tool that turns notes into focused revision packs using QVAC on-device inference.",
   "main": "index.js",
   "scripts": {
-  "test": "echo \"Error: no test specified\" && exit 1",
-  "start": "node server.js",
-  "forge": "node app.js"
-}
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "forge": "node app.js"
   },
   "keywords": [],
   "author": "",
