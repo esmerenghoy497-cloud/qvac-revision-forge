@@ -5,21 +5,48 @@ import {
   LLAMA_3_2_1B_INST_Q4_0
 } from "@qvac/sdk";
 
-const notes = `
-Photosynthesis is the process plants use to convert light energy into chemical energy.
-Chlorophyll absorbs light, mainly in the blue and red parts of the spectrum.
-Carbon dioxide enters through stomata, while water is absorbed by the roots.
-The light-dependent reactions produce ATP and NADPH.
-The Calvin cycle uses ATP and NADPH to help build sugars.
-Oxygen is released as a byproduct of splitting water.
-`;
+import { readFile } from "node:fs/promises";
 
-async function main() {
-  console.log("QVAC Revision Forge");
-  console.log("Loading local model...");
+const file = process.argv[2];
 
-  const modelId = await loadModel({
-    modelSrc: LLAMA_3_2_1B_INST_Q4_0,
+if (!file) {
+  console.error("Usage: npm run forge -- <notes-file>");
+  process.exit(1);
+}
+
+let notes;
+
+try {
+  notes = await readFile(file, "utf8");
+} catch (error) {
+  console.error(`Could not read notes file: ${file}`);
+  process.exit(1);
+}
+
+const cleanNotes = notes.trim();
+
+if (!cleanNotes) {
+  console.error("The notes file is empty.");
+  process.exit(1);
+}
+
+if (cleanNotes.length < 120) {
+  console.error(
+    "Add more study notes first. Revision Forge needs enough source material."
+  );
+  process.exit(1);
+}
+
+console.log("QVAC Revision Forge");
+console.log("===================");
+console.log(`Source: ${file}`);
+console.log("Loading local QVAC model...");
+
+let modelId;
+
+try {
+  modelId = await loadModel({
+    modelSrc: LLAMA_3_2B_INST_Q4_0,
     modelConfig: {
       ctx_size: 2048,
       device: "cpu",
@@ -28,31 +55,41 @@ async function main() {
   });
 
   console.log("Model loaded.");
+  console.log("Generating revision pack...\n");
 
   const prompt = `
-You are Revision Forge, a study-material generator.
+You are Revision Forge.
 
-Transform the student's notes below into a compact revision pack.
-
-Return exactly these sections:
+Return exactly:
 
 CORE IDEA:
+One short sentence based only on the source notes.
+
 KEY CONCEPTS:
+Up to 5 facts directly supported by the source notes.
+
 COMMON MISTAKE:
+One possible misunderstanding based only on the source notes.
+If there is not enough information, write:
+Not stated in the notes.
+
 QUIZ:
-ANSWER KEY:
-
-Keep the answer clear and suitable for a high school student.
-Only use information supported by the notes.
-Do not invent facts or add unsupported details.
-Create exactly 3 quiz questions.
+Exactly 3 multiple-choice questions.
+Each question must be answerable directly from the source notes.
 Each question must have exactly 4 choices.
-Put the correct answer in the ANSWER KEY section only.
-Do not test information that is not explicitly stated in the notes.
-Do not use outside knowledge to create quiz questions.
+The correct choice must be directly supported by the source notes.
+Do not test outside knowledge.
 
-Student notes:
-${notes}
+ANSWER KEY:
+1. [letter]
+2. [letter]
+3. [letter]
+
+Do not put the answers beside the quiz questions.
+
+SOURCE NOTES:
+${cleanNotes}
+END SOURCE NOTES
 `;
 
   const result = completion({
@@ -73,13 +110,12 @@ ${notes}
     process.stdout.write(token);
   }
 
-  console.log("\\n");
-  console.log("Revision pack generated locally by QVAC.");
-
-  await unloadModel({ modelId });
+  console.log("\n\nRevision pack generated locally by QVAC.");
+} catch (error) {
+  console.error("\nQVAC error:", error);
+  process.exitCode = 1;
+} finally {
+  if (modelId) {
+    await unloadModel({ modelId });
+  }
 }
-
-main().catch((error) => {
-  console.error("QVAC error:", error);
-  process.exit(1);
-});
